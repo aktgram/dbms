@@ -1,0 +1,4 @@
+\l - list all databases
+\c <db-name>  - to connect a database
+\dt
+\d 
