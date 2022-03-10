@@ -1,0 +1,250 @@
+-- !!!    CYCLE 6
+
+-- ?? TRIGGER Q1
+
+create table "DELETED_STUDENT_SCHEDULES" (
+	"ClassID" int,
+	"StudentID" int,
+	"ClassStatus" varchar(50),
+	"Grade" varchar(5),
+	primary key("ClassID", "StudentID"),
+	foreign key("ClassStatus") references "STUDENT_CLASS_STATUS"("CategoryID")
+);
+
+create function moveDeleted() returns trigger as $$ 
+begin 
+insert into "DELETED_STUDENT_SCHEDULES" values(old."ClassID", old."StudentID", old."ClassStatus", (old."Grade")::int);  
+return old;  
+end;  
+$$ language plpgsql; 
+create trigger moveDeleted 
+before delete on "STUDENT_SCHEDULES"
+for each row
+execute procedure moveDeleted(); 
+
+select * from "DELETED_STUDENT_SCHEDULES";
+
+delete from "STUDENT_SCHEDULES" where "ClassID"=3005 and "StudentID"=7004; 
+
+select * from "DELETED_STUDENT_SCHEDULES"; 
+
+-- ??END of Q1
+
+--  ?? Q2
+
+create function stopData() returns trigger as $$ 
+begin 
+if (tg_op='INSERT' and extract(dow from current_date)!=5) then 
+raise exception 'Operation only allowed on friday';
+elseif ((tg_op='UPDATE' or tg_op='DELETE') and extract(dow from current_date)=0) then 
+raise exception 'Operation not allowed on sunday';
+end if;
+return new; 
+end; 
+$$ language plpgsql;  
+create trigger stopData before update or insert or delete on "STUDENTS"
+for each row execute procedure stopData(); 
+select * from extract(dow from current_date); 
+update "STUDENTS" set "StudAreaCode"=543345 where "StudentID"=7002; 
+
+-- ?? END
+
+
+
+-- ?? Q3
+
+create function stopUpdate() returns trigger as $$ 
+begin 
+if new."Salary" > old."Salary" then 
+raise exception 'not allowed'; 
+end if; 
+return new; 
+end; 
+$$ language plpgsql; 
+create trigger stopUpdate 
+before update on "STAFF" 
+for each row 
+execute procedure stopUpdate();
+select "StaffID", "StfFirstName", "StfLastName", "Salary" from "STAFF"; 
+update "STAFF" set "Salary"=20000.00 where "StaffID"=9; 
+
+
+-- ??? END
+
+
+
+-- ?? CURSOR Q1
+
+
+declare city_cursor cursor for select * from "STAFF" where "StfCity"='Liverpool'; 
+begin;
+declare city_cursor cursor for select * from "STAFF" where "StfCity"='Liverpool';
+fetch 10 from city_cursor; 
+end;
+
+
+-- ?? END
+
+
+-- ?? C2
+
+create function test(input varchar) 
+returns void 
+language plpgsql  
+as $$  
+declare  
+tmp record;  
+dept_cursor cursor(key varchar) for select stf."StfFirstName", stf."StfLastName" from "STAFF" stf, "CATEGORIES" cat, "FACULTY_CATEGORIES" fcat where stf."StaffID"=fcat."StaffID" and fcat."CategoryID"=cat."CategoryID" and cat."DepartmentID" = (select cat."DepartmentID" from "STAFF" stf, "CATEGORIES" cat, "FACULTY_CATEGORIES" fcat where stf."StaffID"=fcat."StaffID" and fcat."CategoryID"= cat."CategoryID" and stf."StfFirstName"=key);  
+begin  
+open dept_cursor(input);  
+loop  
+fetch from dept_cursor into tmp;  
+raise notice '% %',tmp."StfFirstName",tmp."StfLastName";  
+exit when not found;  
+end loop;  
+close dept_cursor;  
+end;
+$$;
+select test('Rick');  
+
+
+-- ?? END
+
+
+-- ?? C3
+
+begin; 
+declare salary_cursor cursor for select "StaffID", "Salary" from "STAFF" order by "Salary" DESC;  fetch 2 from salary_cursor;
+commit; 
+
+-- ?? END
+
+
+
+-- ?? P1
+
+create procedure facultySearch(faculty_id int) 
+language plpgsql  
+as $$  
+declare  
+rec record;  
+begin  
+for rec in select f."StaffID",s."StfFirstName",s."StfLastName",s."Salary",c."DepartmentID" from "FACULTY" f, "STAFF" s, "CATEGORIES" c, "FACULTY_CATEGORIES" fcat   where f."StaffID"=faculty_id and f."StaffID"=s ."StaffID" and f."StaffID"=fcat."StaffID" and fcat."CategoryID"=c."CategoryID"
+loop  
+raise notice '% % % % %', rec."StaffID", rec."StfFirstName", rec."StfLastName" ,rec."Salary", rec."DepartmentID";  
+end loop;  
+end;  
+$$; 
+call facultySearch(5001); 
+
+
+
+
+-- ??  END
+
+
+-- ?? P2
+
+
+create procedure departmentSearch()  
+language plpgsql  
+as $$  
+declare  rec record;  
+begin  
+for rec in select "DepartmentID" from "CATEGORIES" where "DepartmentID" = (select c."DepartmentID" from "CATEGORIES" c, "FACULTY_CATEGORIES" fcat, "FACULTY" f where f."StaffID"=fcat."StaffID" and fcat."CategoryID"=c."CategoryID" group by c."DepartmentID" having count(f."StaffID")>4)  
+loop  
+raise notice '%',rec."DepartmentID";
+end loop;  
+end;  
+$$; 
+call departmentSearch(); 
+
+
+
+-- ??  END
+
+-- ?? P3
+ 
+create procedure salaryHike(faculty_id int) 
+language plpgsql
+as $$  
+declare  
+rec interval;  
+begin 
+select age(current_date,"JoiningDate") into rec from "STAFF" where "StaffID"=faculty_id;  
+if rec>interval '2 years' then  
+update "STAFF" set "Salary" = 1.05*"Salary" where "StaffID"=faculty_id;  
+else  
+raise notice 'No increment';  
+end if;  
+end;  
+$$;  
+call salaryHike(5008);
+select "StaffID", "Salary", "JoiningDate" from "STAFF"; 
+ 
+--  ?? END
+
+
+-- ?? P4
+
+select * from "SUBJECTS"; 
+
+create function deleteSub()  
+returns void  
+language plpgsql  
+as $$  
+declare  
+rec record;  
+begin  
+delete from "SUBJECTS" where "SubjectID" not in (select sub."SubjectID" from "SUBJECTS" sub ,"CLASSES" cls,
+"STUDENT_SCHEDULES" st where sub."SubjectID"=cls."SubjectID" and cls."ClassID"=st."ClassID" group by 
+sub."SubjectID" having count(st."StudentID")>0);  
+end;  
+$$; 
+select deleteSub(); 
+
+select * from "SUBJECTS"; 
+
+-- ?? END
+
+
+
+
+-- ?? P5
+
+create function lessThanAvgSalary()  
+returns record  
+language plpgsql  
+as $$  
+declare  rec record;  
+begin  
+select "StfFirstName", "StfLastName" into rec from "STAFF" where "Salary" < (select avg("Salary")/4 from "STAFF");  
+return rec;  
+end;  
+$$; 
+select "StfFirstName", "StfLastName", "Salary" from "STAFF";
+select lessThanAvgSalary();   
+
+
+-- ?? END
+
+
+-- ?? P6
+
+select "StfFirstName", "StfLastName", "Salary" from "STAFF";
+
+create function updateSalary()  
+returns void  
+language plpgsql  
+as $$ 
+begin 
+update "STAFF" set "Salary" = 1.25*"Salary" where "Salary"<10000; 
+end; 
+$$; 
+select updateSalary(); 
+
+select "StfFirstName", "StfLastName", "Salary" from "STAFF";
+
+
+
+-- ?? END
