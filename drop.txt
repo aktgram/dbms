@@ -1,0 +1,9 @@
+DROP TABLE <table-name>;
+
+DROP TRIGGER <trigger-name> ON <table-name>;
+
+DROP TABLE <table-name>;
+
+DROP FUNCTION <function-name>;
+
+DROP PROCEDURE <procedure-name>;
