@@ -1,0 +1,22 @@
+create table "SUBJECTS" (
+	"SubjectID" int primary key,
+	"CategoryID" int,
+	"SubjectCode" int,
+	"SubjectName" varchar(25),
+	"SubjectDescription" varchar(50),
+	foreign key("CategoryID") references "CATEGORIES"("CategoryID")
+);
+
+
+create table "FACULTY_SUBJECTS" (
+	"StaffID" int, "ClassID" int,
+	"ProficiencyRating" dec(2,1),
+	primary key("StaffID", "ClassID")
+);
+
+
+
+
+insert into "STAFF" values(1,'ADARSH','G','VALLICODE','PATHANAMTHITTA','KERALA',689648,0468,'7070707070','2020-12-12',10000,'PROFESSOR');
+insert into "FACULTY_CLASSES" values
+(1, 3003),
