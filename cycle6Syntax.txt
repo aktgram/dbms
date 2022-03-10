@@ -1,0 +1,63 @@
+PROCEDURE
+
+create procedure <procedure-name>(<param-list>) 
+
+language plpgsql 
+as $$
+declare 
+/////
+begin
+/////
+end;
+$$;
+
+
+call <procedure-name>(<param-list>)
+
+FUNCTION
+
+create function <function-name>(<param-list>)
+returns <d-type>
+language plpgsql
+as $$
+declare
+///
+begin
+////
+end;
+$$:
+
+select <function-name>(); 
+
+TRIGGER
+
+create function <function-name> return trigger as $$
+begin
+// function body code
+end;
+
+$$;
+language plpgsql;
+
+create trigger <trigger-name>
+[before/after] [insert/update/delete-(target operation)] on <table-name>
+for each [row/statement]
+execute procedure <procedure-name>
+
+
+CURSOR 
+
+
+declare
+<cursor-name> cursor for
+select * from <table-name> WHERE < condition>
+
+
+fetch <num> from <cursor-name>
+fetch from <cursor-name> into <record-name>
+
+
+
+
+
+
