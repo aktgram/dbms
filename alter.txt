@@ -1,0 +1,10 @@
+ALTER
+
+alter table "STAFF"
+rename column "DateHired" to "JoiningDate";
+
+alter table "SUBJECTS"
+drop column "SubjectDescription";
+
+alter table "STUDENT_CLASS_STATUS"
+alter column "CategoryID" type varchar(50);
